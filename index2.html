@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Loom</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0e0c; --bg2:#15130f;
+  --card:rgba(255,244,224,.05); --card2:rgba(255,244,224,.08); --card3:rgba(255,244,224,.12);
+  --line:rgba(255,236,200,.10); --line2:rgba(255,236,200,.20);
+  --txt:#f7f3ea; --txt2:#d4ccba; --muted:#9a9384; --muted2:#65604f;
+  --gold:#f4b740; --gold2:#ffd070; --gold-dim:rgba(244,183,64,.15);
+  --green:#5ccf83; --green-dim:rgba(92,207,131,.15);
+  --red:#ff5d57; --red-dim:rgba(255,93,87,.14);
+  --blue:#63a7f2;
+  --radius:22px; --radius-sm:14px;
+  --tap:.18s cubic-bezier(.2,.8,.3,1);
+  --spring:.5s cubic-bezier(.22,1.2,.36,1);
+  --shadow:0 18px 50px rgba(0,0,0,.45);
+  --glass:linear-gradient(160deg,rgba(255,244,224,.09),rgba(255,244,224,.02) 55%,rgba(255,244,224,.04));
+  --blur:blur(22px) saturate(1.5);
+}
+html[data-theme="light"]{
+  --bg:#ece5d6; --bg2:#f6f1e7;
+  --card:rgba(255,255,255,.66); --card2:rgba(255,255,255,.8); --card3:rgba(255,255,255,.92);
+  --line:rgba(60,48,24,.10); --line2:rgba(60,48,24,.20);
+  --txt:#1b1813; --txt2:#3d382f; --muted:#79715f; --muted2:#aaa18c;
+  --gold:#cf8f12; --gold2:#a87209; --gold-dim:rgba(207,143,18,.14);
+  --green:#2da45c; --green-dim:rgba(45,164,92,.14);
+  --red:#df463d; --red-dim:rgba(223,70,61,.12);
+  --shadow:0 18px 50px rgba(80,60,20,.14);
+  --glass:linear-gradient(160deg,rgba(255,255,255,.8),rgba(255,255,255,.4) 55%,rgba(255,255,255,.62));
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;font-family:'Manrope',-apple-system,BlinkMacSystemFont,sans-serif}
+html,body{height:100%}
+body{background:var(--bg);color:var(--txt);overscroll-behavior:none;-webkit-font-smoothing:antialiased;position:relative;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:-20%;z-index:-2;pointer-events:none;
+  background:radial-gradient(50% 38% at 82% 4%,var(--gold-dim),transparent 60%),radial-gradient(45% 34% at 8% 100%,rgba(92,207,131,.08),transparent 60%)}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+
+/* shell */
+#app{max-width:520px;margin:0 auto;min-height:100%;padding:calc(env(safe-area-inset-top) + 8px) 14px 96px;position:relative}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 14px;position:sticky;top:0;z-index:30}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:20px;letter-spacing:-.02em}
+.brand .dot{width:10px;height:10px;border-radius:3px;background:var(--gold);box-shadow:0 0 14px var(--gold)}
+.top-right{display:flex;align-items:center;gap:10px}
+.lvl-chip{display:flex;align-items:center;gap:7px;background:var(--card2);border:1px solid var(--line);border-radius:30px;padding:5px 11px 5px 7px}
+.lvl-chip .ring{width:24px;height:24px;flex-shrink:0}
+.lvl-chip b{font-size:13px;font-weight:700}
+.lvl-chip span{font-size:11px;color:var(--muted)}
+.sync{width:9px;height:9px;border-radius:50%;background:var(--muted2);transition:var(--tap)}
+.sync.syncing{background:var(--gold);animation:pulse 1s infinite}
+.sync.ok{background:var(--green)} .sync.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.screen{display:none;animation:fade .32s ease}
+.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* cards */
+.card{background:var(--card);background-image:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card.tight{padding:13px}
+.row{display:flex;align-items:center;gap:12px}
+.between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.h-big{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.sub{font-size:13px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* hero day-ring */
+.hero{display:flex;align-items:center;gap:18px}
+.dayring{position:relative;width:118px;height:118px;flex-shrink:0}
+.dayring .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dayring .pct b{font-size:27px;font-weight:800;letter-spacing:-.03em}
+.dayring .pct span{font-size:11px;color:var(--muted);margin-top:1px}
+.hero-meta{flex:1;min-width:0}
+.hero-meta .greet{font-size:15px;color:var(--txt2);font-weight:600}
+.hero-meta .date{font-size:12px;color:var(--muted);margin-top:1px;text-transform:capitalize}
+.hero-stats{display:flex;gap:16px;margin-top:13px}
+.hero-stats .s b{font-size:18px;font-weight:800;display:block;letter-spacing:-.02em}
+.hero-stats .s span{font-size:11px;color:var(--muted)}
+.streak b{color:var(--gold)}
+
+/* progress bars */
+.bar{height:9px;border-radius:30px;background:var(--card3);overflow:hidden;position:relative}
+.bar>i{display:block;height:100%;border-radius:30px;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .6s cubic-bezier(.2,.9,.3,1)}
+.bar.g>i{background:linear-gradient(90deg,var(--green),#8be0a8)}
+.tick{position:absolute;top:-3px;width:2px;height:15px;background:var(--line2);border-radius:2px}
+
+/* xp bar */
+.xpbar{height:7px;border-radius:30px;background:var(--card3);overflow:hidden;margin-top:9px}
+.xpbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .5s}
+
+/* stat tiles */
+.tile{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px}
+.tile .k{font-size:11px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:5px}
+.tile .v{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:5px}
+.tile .v small{font-size:12px;color:var(--muted);font-weight:600}
+
+/* tasks */
+.tk{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line)}
+.tk:last-child{border-bottom:none}
+.ck{width:26px;height:26px;border-radius:9px;border:2px solid var(--line2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:var(--tap);cursor:pointer}
+.ck.on{background:var(--green);border-color:var(--green)}
+.ck.on svg{opacity:1;stroke:#0a1f12}
+.ck svg{width:15px;height:15px;opacity:0;stroke:#fff;stroke-width:3.4;fill:none}
+.tk .body{flex:1;min-width:0}
+.tk .ttl{font-size:15px;font-weight:600;line-height:1.25}
+.tk.done .ttl{text-decoration:line-through;color:var(--muted)}
+.tk .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.pill{font-size:11px;font-weight:600;padding:3px 8px;border-radius:30px;background:var(--card3);color:var(--txt2);display:inline-flex;align-items:center;gap:4px}
+.pill.p3{background:var(--red-dim);color:var(--red)}
+.pill.p2{background:var(--gold-dim);color:var(--gold)}
+.pill.rep{background:var(--gold-dim);color:var(--gold)}
+.pill.over{background:var(--red-dim);color:var(--red)}
+.pill.cli{background:rgba(99,167,242,.14);color:var(--blue)}
+.tk .x{color:var(--muted2);font-size:20px;padding:4px;cursor:pointer;line-height:1}
+.sec-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:18px 4px 8px}
+
+/* money rows */
+.mrow{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
+.mrow:last-child{border-bottom:none}
+.mrow .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px}
+.mrow .ic.in{background:var(--green-dim);color:var(--green)}
+.mrow .ic.out{background:var(--red-dim);color:var(--red)}
+.mrow .ic.pend{background:var(--gold-dim);color:var(--gold)}
+.mrow .body{flex:1;min-width:0}
+.mrow .nm{font-size:14px;font-weight:600}
+.mrow .dt{font-size:11px;color:var(--muted);margin-top:2px}
+.mrow .amt{font-size:15px;font-weight:800}
+.mrow .amt.in{color:var(--green)} .mrow .amt.out{color:var(--txt2)}
+.spark{display:flex;align-items:flex-end;gap:7px;height:64px;margin-top:8px}
+.spark .b{flex:1;background:var(--card3);border-radius:7px 7px 4px 4px;position:relative;min-height:4px;transition:height .5s}
+.spark .b.cur{background:linear-gradient(180deg,var(--gold2),var(--gold))}
+.spark .lb{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted)}
+
+/* goals */
+.goal{padding:14px 0;border-bottom:1px solid var(--line)}
+.goal:last-child{border-bottom:none}
+.goal .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;gap:10px}
+.goal .gname{font-size:15px;font-weight:700}
+.goal .gval{font-size:13px;font-weight:700}
+.goal .gctl{display:flex;gap:8px;margin-top:10px;align-items:center}
+.stepbtn{width:34px;height:34px;border-radius:11px;background:var(--card3);border:1px solid var(--line);color:var(--txt);font-size:19px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.scen{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.scen .c{text-align:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 6px}
+.scen .c .l{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.scen .c .n{font-size:14px;font-weight:800;margin-top:3px}
+.scen .c.hit{border-color:var(--green);background:var(--green-dim)}
+
+/* quests */
+.quest{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--line)}
+.quest:last-child{border-bottom:none}
+.quest .q-ic{width:34px;height:34px;border-radius:10px;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.quest.done .q-ic{background:var(--green-dim);color:var(--green)}
+.quest .qb{flex:1;min-width:0}
+.quest .qn{font-size:13px;font-weight:600}
+.quest .qx{font-size:12px;font-weight:700;color:var(--gold)}
+.quest.done .qx{color:var(--green)}
+
+/* buttons */
+.btn{width:100%;border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;transition:var(--tap);font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-pri{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#241a05}
+.btn-sec{background:var(--card2);border:1px solid var(--line);color:var(--txt)}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid transparent}
+
+/* fab */
+.fab{position:fixed;right:max(16px,calc(50% - 260px + 16px));bottom:84px;width:60px;height:60px;border-radius:20px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#241a05;border:none;font-size:30px;font-weight:600;box-shadow:0 12px 30px rgba(244,183,64,.4);cursor:pointer;z-index:40;display:flex;align-items:center;justify-content:center;transition:var(--spring)}
+.fab:active{transform:scale(.9) rotate(90deg)}
+
+/* tabbar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;justify-content:center;padding:0 14px calc(env(safe-area-inset-bottom) + 10px)}
+.tabbar .inner{max-width:520px;width:100%;display:flex;justify-content:space-around;background:var(--card2);background-image:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--line);border-radius:24px;padding:8px 6px;box-shadow:var(--shadow)}
+.tab{flex:1;background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;cursor:pointer;font-family:inherit;transition:var(--tap)}
+.tab svg{width:23px;height:23px;stroke:currentColor;stroke-width:1.9;fill:none}
+.tab span{font-size:10px;font-weight:600}
+.tab.on{color:var(--gold)}
+
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);z-index:50;opacity:0;pointer-events:none;transition:.25s}
+.sheet-bg.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:51;background:var(--bg2);border-radius:28px 28px 0 0;border-top:1px solid var(--line2);padding:10px 18px calc(env(safe-area-inset-bottom) + 22px);transform:translateY(100%);transition:transform .34s cubic-bezier(.22,1,.36,1);max-height:90vh;overflow-y:auto;max-width:520px;margin:0 auto}
+.sheet.open{transform:none}
+.sheet .grab{width:40px;height:4px;border-radius:30px;background:var(--line2);margin:4px auto 14px}
+.sheet h3{font-size:19px;font-weight:800;margin-bottom:16px;letter-spacing:-.02em}
+.field{margin-bottom:14px}
+.field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:7px;text-transform:uppercase;letter-spacing:.04em}
+.inp{width:100%;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:14px;font-size:16px;color:var(--txt);font-family:inherit;outline:none;transition:var(--tap)}
+.inp:focus{border-color:var(--gold)}
+textarea.inp{resize:none;min-height:64px}
+.seg{display:flex;gap:7px}
+.seg button{flex:1;background:var(--card);border:1px solid var(--line2);border-radius:13px;padding:12px 6px;font-size:13px;font-weight:700;color:var(--txt2);cursor:pointer;font-family:inherit;transition:var(--tap)}
+.seg button.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{background:var(--card);border:1px solid var(--line2);border-radius:30px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--txt2);cursor:pointer;transition:var(--tap)}
+.chip.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
+
+/* toast + empty */
+#toast{position:fixed;left:50%;bottom:160px;transform:translateX(-50%) translateY(20px);background:var(--txt);color:var(--bg);padding:12px 20px;border-radius:30px;font-size:14px;font-weight:700;z-index:80;opacity:0;pointer-events:none;transition:.3s;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.xp{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#241a05}
+.empty{text-align:center;padding:34px 16px;color:var(--muted)}
+.empty .em{font-size:32px;margin-bottom:10px}
+.empty .et{font-size:14px;font-weight:600;color:var(--txt2)}
+.empty .es{font-size:12px;margin-top:4px}
+
+/* levelup */
+.levelup{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:.3s}
+.levelup.show{opacity:1;pointer-events:auto}
+.levelup .box{text-align:center;transform:scale(.7);transition:var(--spring)}
+.levelup.show .box{transform:scale(1)}
+.levelup .big{font-size:64px}
+.levelup .t1{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.levelup .t2{font-size:30px;font-weight:800;margin-top:4px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:15px 2px;border-bottom:1px solid var(--line)}
+.set-row:last-child{border:none}
+.set-row .sl{font-size:15px;font-weight:600}
+.set-row .sd{font-size:12px;color:var(--muted);margin-top:2px}
+.toggle{width:50px;height:30px;border-radius:30px;background:var(--card3);border:1px solid var(--line2);position:relative;cursor:pointer;transition:var(--tap);flex-shrink:0}
+.toggle.on{background:var(--gold)}
+.toggle i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:var(--spring)}
+.toggle.on i{left:23px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span>Loom</div>
+    <div class="top-right">
+      <div class="lvl-chip" id="lvl-chip"></div>
+      <div class="sync" id="sync"></div>
+    </div>
+  </div>
+
+  <section class="screen active" id="screen-home"><div id="home-body"></div></section>
+  <section class="screen" id="screen-tasks"><div id="tasks-body"></div></section>
+  <section class="screen" id="screen-goals"><div id="goals-body"></div></section>
+  <section class="screen" id="screen-money"><div id="money-body"></div></section>
+  <section class="screen" id="screen-more"><div id="more-body"></div></section>
+
+  <button class="fab" id="fab">+</button>
+</div>
+
+<div class="tabbar"><div class="inner">
+  <button class="tab on" data-tab="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Дом</span></button>
+  <button class="tab" data-tab="tasks"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Задачи</span></button>
+  <button class="tab" data-tab="goals"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg><span>Цели</span></button>
+  <button class="tab" data-tab="money"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="12" cy="12" r="3"/></svg><span>Деньги</span></button>
+  <button class="tab" data-tab="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Ещё</span></button>
+</div></div>
+
+<div class="sheet-bg" id="sheet-bg"></div>
+<div class="sheet" id="sheet"></div>
+<div id="toast"></div>
+<div class="levelup" id="levelup"><div class="box"><div class="big">🪙</div><div class="t1">Новый уровень</div><div class="t2" id="lu-n">2</div></div></div>
+
+<script>
+/* ============ SUPABASE (заполни в инструкции; до этого — только локально) ============ */
+const SB_URL="https://YOUR_PROJECT.supabase.co";
+const SB_KEY="YOUR_ANON_KEY";
+const CLOUD_ON = !SB_URL.includes("YOUR_") && !SB_KEY.includes("YOUR_");
+const KEY="loom_v1";
+let TG_ID=null, CLOUD_READY=false, pushT=null;
+
+const TG=(window.Telegram&&window.Telegram.WebApp)?window.Telegram.WebApp:null;
+function deviceId(){let d=localStorage.getItem("loom_device");if(!d){d="dev_"+Math.random().toString(36).slice(2,12);localStorage.setItem("loom_device",d)}return d}
+function haptic(t){try{if(TG&&TG.HapticFeedback){if(t==="ok")TG.HapticFeedback.notificationOccurred("success");else if(t==="err")TG.HapticFeedback.notificationOccurred("error");else TG.HapticFeedback.impactOccurred(t||"light")}}catch(e){}}
+
+function sbHeaders(){return{"apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY,"Content-Type":"application/json"}}
+async function sbGet(path){const r=await fetch(SB_URL+"/rest/v1/"+path,{headers:sbHeaders()});if(!r.ok)throw new Error("GET "+r.status);return r.json()}
+async function sbUpsert(rows){const r=await fetch(SB_URL+"/rest/v1/loom_state?on_conflict=tg_id",{method:"POST",headers:Object.assign({"Prefer":"resolution=merge-duplicates,return=minimal"},sbHeaders()),body:JSON.stringify(rows)});if(!r.ok){const t=await r.text();throw new Error("UPSERT "+r.status+" "+t)}}
+async function cloudPull(){const rows=await sbGet("loom_state?tg_id=eq."+encodeURIComponent(TG_ID)+"&select=data,updated_at");return rows&&rows[0]?rows[0]:null}
+async function cloudPushAll(){if(!CLOUD_READY)return;await sbUpsert([{tg_id:TG_ID,data:state,updated_at:state._u||Date.now()}])}
+function pushDebounced(){if(!CLOUD_READY)return;setSync("syncing");clearTimeout(pushT);pushT=setTimeout(()=>{cloudPushAll().then(()=>setSync("ok")).catch(e=>{console.warn(e);setSync("err")})},700)}
+function setSync(s){const el=document.getElementById("sync");if(!el)return;el.className="sync "+(CLOUD_ON?s:"");el.title=({syncing:"синхронизация…",ok:"всё в облаке",err:"нет связи — сохранено локально"})[s]||"локально"}
+
+/* ============ STATE ============ */
+const DEFAULTS={
+  tasks:[], 
+  income:[], expenses:[],
+  goals:{ money:null, weekly:[] },
+  dayGoals:{},
+  game:{xp:0, streak:0, streakDay:null, quests:null},
+  settings:{theme:"dark", currency:"₽", name:""},
+  activity:[],
+  _u:0
+};
+function loadState(){let s=null;try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  if(!s)return JSON.parse(JSON.stringify(DEFAULTS));
+  return Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),s,{
+    goals:Object.assign({money:null,weekly:[]},s.goals||{}),
+    game:Object.assign({xp:0,streak:0,streakDay:null,quests:null},s.game||{}),
+    settings:Object.assign({theme:"dark",currency:"₽",name:""},s.settings||{})
+  })}
+let state=loadState();
+function save(){state._u=Date.now();localStorage.setItem(KEY,JSON.stringify(state));pushDebounced()}
+
+/* ============ HELPERS ============ */
+const uid=()=>Math.random().toString(36).slice(2,10);
+function todayKey(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function monthKey(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")}
+function isToday(ts){if(!ts)return false;return todayKey(new Date(ts))===todayKey()}
+function startOfDay(ts){const d=new Date(ts);d.setHours(0,0,0,0);return d.getTime()}
+function isoWeek(d){d=new Date(d);d.setHours(0,0,0,0);d.setDate(d.getDate()+3-((d.getDay()+6)%7));const w1=new Date(d.getFullYear(),0,4);return d.getFullYear()+"-W"+(1+Math.round(((d-w1)/86400000-3+((w1.getDay()+6)%7))/7))}
+function cur(){return state.settings.currency||"₽"}
+function fmt(n){n=Math.round(n||0);const s=Math.abs(n).toLocaleString("ru-RU");return(n<0?"-":"")+s}
+function fmtMoney(n){return fmt(n)+" "+cur()}
+function ruDate(d){d=d||new Date();const m=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];const wd=["воскресенье","понедельник","вторник","среда","четверг","пятница","суббота"];return wd[d.getDay()]+", "+d.getDate()+" "+m[d.getMonth()]}
+function ruShort(ts){const d=new Date(ts);const m=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];return d.getDate()+" "+m[d.getMonth()]}
+function logAct(type,detail){state.activity=state.activity||[];state.activity.unshift({t:Date.now(),type,detail:detail||""});if(state.activity.length>120)state.activity=state.activity.slice(0,120)}
+
+/* ============ GAME LOGIC ============ */
+function levelInfo(xp){let lvl=1,need=100,acc=0;while(xp>=acc+need){acc+=need;lvl++;need=100+lvl*60}return{lvl,inLvl:xp-acc,need,pct:Math.min(1,(xp-acc)/need)}}
+function addXP(n,reason){const before=levelInfo(state.game.xp).lvl;state.game.xp+=n;const after=levelInfo(state.game.xp).lvl;toast("+"+n+" XP"+(reason?" · "+reason:""),"xp");if(after>before)setTimeout(()=>levelUp(after),420)}
+function levelUp(n){const lu=document.getElementById("levelup");document.getElementById("lu-n").textContent="Уровень "+n;lu.classList.add("show");haptic("ok");setTimeout(()=>lu.classList.remove("show"),1900)}
+function bumpStreak(){const tk=todayKey();if(state.game.streakDay===tk)return;const y=todayKey(new Date(Date.now()-86400000));if(state.game.streakDay===y)state.game.streak=(state.game.streak||0)+1;else state.game.streak=1;state.game.streakDay=tk}
+
+/* quests: regenerated each day */
+function ensureQuests(){const tk=todayKey();const q=state.game.quests;
+  if(!q||q.day!==tk){state.game.quests={day:tk,items:[
+    {id:"t3",label:"Закрой 3 задачи",goal:3,prog:0,xp:40,done:false},
+    {id:"goal",label:"Выполни цель дня",goal:1,prog:0,xp:60,done:false},
+    {id:"money",label:"Внеси доход или расход",goal:1,prog:0,xp:30,done:false}
+  ]}}}
+function questProgress(id,inc){ensureQuests();const it=state.game.quests.items.find(q=>q.id===id);if(!it||it.done)return;it.prog=Math.min(it.goal,it.prog+(inc||1));if(it.prog>=it.goal){it.done=true;addXP(it.xp,"квест")}}
+
+/* ============ TASKS ============ */
+function resetRecurring(){let changed=false;const tk=todayKey(),wk=isoWeek(new Date());
+  state.tasks.forEach(t=>{if(t.archived)return;
+    if(t.repeat==="daily"&&t.done&&(!t.doneKey||t.doneKey!==tk)){t.done=false;t.doneAt=null;changed=true}
+    if(t.repeat==="weekly"&&t.done&&t.doneWeek!==wk){t.done=false;t.doneAt=null;changed=true}
+  });if(changed)localStorage.setItem(KEY,JSON.stringify(state))}
+function tasksToday(){const tk=todayKey();const end=startOfDay(Date.now())+86400000-1;
+  return state.tasks.filter(t=>!t.archived&&(t.repeat!=="none"||(t.due&&t.due<=end)))}
+function tasksBacklog(){return state.tasks.filter(t=>!t.archived&&t.repeat==="none"&&!t.due&&!t.done)}
+function doneTodayCount(){return state.tasks.filter(t=>!t.archived&&t.done&&isToday(t.doneAt)).length}
+function dayGoal(){const g=state.dayGoals[todayKey()];return g==null?5:g}
+function setDayGoal(n){state.dayGoals[todayKey()]=Math.max(0,n);const ks=Object.keys(state.dayGoals);if(ks.length>40)ks.sort().slice(0,ks.length-40).forEach(k=>delete state.dayGoals[k])}
+
+function toggleTask(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;
+  t.done=!t.done;
+  if(t.done){t.doneAt=Date.now();t.doneKey=todayKey();t.doneWeek=isoWeek(new Date());
+    const xp=10+(t.priority>=3?10:t.priority>=2?5:0);addXP(xp,"задача");bumpStreak();
+    questProgress("t3");if(doneTodayCount()>=dayGoal())questProgress("goal");haptic("ok");logAct("task",t.title)}
+  else{t.doneAt=null;haptic("light")}
+  save();renderHome();renderTasks();renderLvl()}
+
+function addTask(d){state.tasks.unshift({id:uid(),title:d.title,priority:d.priority||1,client:d.client||"",due:d.due||null,repeat:d.repeat||"none",done:false,doneAt:null,created:Date.now()});save();logAct("new","задача: "+d.title)}
+function delTask(id){state.tasks=state.tasks.filter(t=>t.id!==id);save();renderHome();renderTasks()}
+
+/* ============ MONEY ============ */
+function monthIncome(paidOnly){const mk=monthKey();return state.income.filter(i=>monthKey(new Date(i.date))===mk&&(!paidOnly||i.status==="paid")).reduce((a,b)=>a+(+b.amount||0),0)}
+function monthPending(){const mk=monthKey();return state.income.filter(i=>monthKey(new Date(i.date))===mk&&i.status==="pending").reduce((a,b)=>a+(+b.amount||0),0)}
+function monthExpense(){const mk=monthKey();return state.expenses.filter(e=>monthKey(new Date(e.date))===mk).reduce((a,b)=>a+(+b.amount||0),0)}
+function monthlyIncomeSeries(){const out=[];const now=new Date();for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const mk=monthKey(d);const v=state.income.filter(x=>monthKey(new Date(x.date))===mk&&x.status==="paid").reduce((a,b)=>a+(+b.amount||0),0);out.push({mk,v,lbl:["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"][d.getMonth()]})}return out}
+function addIncome(d){state.income.unshift({id:uid(),client:d.client||"",amount:+d.amount||0,status:d.status||"paid",date:d.date||Date.now(),note:d.note||""});if(d.status==="paid")addXP(15,"доход");questProgress("money");save();logAct("income",fmtMoney(+d.amount))}
+function addExpense(d){state.expenses.unshift({id:uid(),title:d.title||"",amount:+d.amount||0,date:d.date||Date.now(),recurring:!!d.recurring,note:d.note||""});questProgress("money");save();logAct("expense",fmtMoney(+d.amount))}
+function delIncome(id){state.income=state.income.filter(x=>x.id!==id);save();renderMoney()}
+function delExpense(id){state.expenses=state.expenses.filter(x=>x.id!==id);save();renderMoney()}
+function togglePaid(id){const i=state.income.find(x=>x.id===id);if(!i)return;i.status=i.status==="paid"?"pending":"paid";if(i.status==="paid")addXP(15,"оплата");save();renderMoney()}
+
+/* ============ GOALS ============ */
+function setMoneyGoal(p,a,o){state.goals.money={month:monthKey(),pess:+p||0,avg:+a||0,optim:+o||0};save()}
+function addWeeklyGoal(d){state.goals.weekly.unshift({id:uid(),title:d.title,target:+d.target||1,prog:0,unit:d.unit||"",week:isoWeek(new Date())});save()}
+function bumpWeekly(id,n){const g=state.goals.weekly.find(x=>x.id===id);if(!g)return;const was=g.prog>=g.target;g.prog=Math.max(0,g.prog+n);if(!was&&g.prog>=g.target){addXP(100,"цель недели");haptic("ok")}save();renderGoals()}
+function delWeekly(id){state.goals.weekly=state.goals.weekly.filter(x=>x.id!==id);save();renderGoals()}
+function resetWeeklyIfNew(){const wk=isoWeek(new Date());state.goals.weekly.forEach(g=>{if(g.week!==wk){g.week=wk;g.prog=0}})}
+
+/* ============ RENDER: ring svg ============ */
+function ring(pct,size,sw,cls){const r=(size-sw)/2,c=2*Math.PI*r,off=c*(1-Math.min(1,pct));const col=cls==="g"?"var(--green)":"var(--gold)";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--card3)" stroke-width="${sw}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 ${size/2} ${size/2})" style="transition:stroke-dashoffset .7s cubic-bezier(.2,.9,.3,1)"/></svg>`}
+
+function renderLvl(){const li=levelInfo(state.game.xp);
+  document.getElementById("lvl-chip").innerHTML=`<div class="ring">${ring(li.pct,24,4)}</div><div><b class="mono">${li.lvl}</b> <span>ур</span></div>`}
+
+/* ============ RENDER: HOME ============ */
+function renderHome(){ensureQuests();
+  const dn=doneTodayCount(),dg=dayGoal(),dpct=dg>0?dn/dg:1;
+  const li=levelInfo(state.game.xp);
+  const inc=monthIncome(true),mg=state.goals.money;
+  const greet=(()=>{const h=new Date().getHours();return h<6?"Доброй ночи":h<12?"Доброе утро":h<18?"Добрый день":"Добрый вечер"})();
+  const nm=state.settings.name?(", "+state.settings.name):"";
+  let h=`<div class="card">
+    <div class="hero">
+      <div class="dayring">${ring(Math.min(1,dpct),118,11)}<div class="pct"><b class="mono">${Math.round(Math.min(1,dpct)*100)}%</b><span>цель дня</span></div></div>
+      <div class="hero-meta">
+        <div class="greet">${greet}${nm}</div>
+        <div class="date">${ruDate()}</div>
+        <div class="hero-stats">
+          <div class="s"><b class="mono">${dn}/${dg}</b><span>задачи</span></div>
+          <div class="s streak"><b class="mono">🔥${state.game.streak||0}</b><span>стрик</span></div>
+          <div class="s"><b class="mono">${li.lvl}</b><span>уровень · ${li.inLvl}/${li.need}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="xpbar"><i style="width:${li.pct*100}%"></i></div>
+  </div>`;
+
+  /* money month */
+  h+=`<div class="card tight" onclick="show('money')" style="cursor:pointer">
+    <div class="between"><div class="eyebrow">Доход · ${new Date().toLocaleDateString("ru-RU",{month:"long"})}</div>${mg?`<div class="sub mono">из ${fmt(mg.avg)}</div>`:`<div class="sub">цель не задана</div>`}</div>
+    <div class="h-big mono" style="margin:8px 0 4px">${fmt(inc)} <span style="font-size:18px;color:var(--muted)">${cur()}</span></div>`;
+  if(mg&&mg.avg>0){const p=Math.min(1,inc/mg.avg);const tp=mg.optim>mg.pess?(mg.pess/mg.optim):0;
+    h+=`<div class="bar g" style="margin-top:6px"><i style="width:${p*100}%"></i></div>`}
+  if(monthPending()>0)h+=`<div class="sub" style="margin-top:8px">⏳ в ожидании: <span class="mono">${fmtMoney(monthPending())}</span></div>`;
+  h+=`</div>`;
+
+  /* quests */
+  const qs=state.game.quests.items;
+  h+=`<div class="card"><div class="eyebrow" style="margin-bottom:6px">Квесты дня</div>`;
+  qs.forEach(q=>{h+=`<div class="quest ${q.done?"done":""}"><div class="q-ic">${q.done?"✓":"◆"}</div><div class="qb"><div class="qn">${q.label}</div><div class="bar" style="margin-top:6px;height:6px"><i style="width:${q.goal?Math.min(100,q.prog/q.goal*100):0}%"></i></div></div><div class="qx">+${q.xp}</div></div>`});
+  h+=`</div>`;
+
+  /* today tasks preview */
+  const tt=tasksToday().filter(t=>!t.done).slice(0,4);
+  h+=`<div class="card" onclick="show('tasks')" style="cursor:pointer"><div class="between" style="margin-bottom:4px"><div class="eyebrow">Сегодня</div><div class="sub">${tasksToday().filter(t=>!t.done).length} осталось →</div></div>`;
+  if(tt.length===0)h+=`<div class="empty" style="padding:18px"><div class="et">Всё закрыто 🎉</div><div class="es">Красавчик. Можешь накинуть ещё.</div></div>`;
+  else tt.forEach(t=>{h+=`<div class="tk" style="padding:11px 0"><div class="ck" onclick="event.stopPropagation();toggleTask('${t.id}')"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="body"><div class="ttl">${esc(t.title)}</div>${taskMeta(t)}</div></div>`});
+  h+=`</div>`;
+
+  document.getElementById("home-body").innerHTML=h;renderLvl()}
+
+function taskMeta(t){let m=[];const end=startOfDay(Date.now())+86400000-1;
+  if(t.repeat==="daily")m.push(`<span class="pill rep">↻ ежедневно</span>`);
+  else if(t.repeat==="weekly")m.push(`<span class="pill rep">↻ еженедельно</span>`);
+  if(t.due){const over=t.due<startOfDay(Date.now())&&!t.done;const dueToday=t.due>=startOfDay(Date.now())&&t.due<=end;
+    m.push(`<span class="pill ${over?"over":""}">${over?"⚠ просрочено":dueToday?"сегодня":ruShort(t.due)}</span>`)}
+  if(t.priority>=2)m.push(`<span class="pill p${t.priority}">${t.priority>=3?"!! важно":"! приоритет"}</span>`);
+  if(t.client)m.push(`<span class="pill cli">@${esc(t.client)}</span>`);
+  return m.length?`<div class="meta">${m.join("")}</div>`:""}
+function esc(s){return(s||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]))}
+
+/* ============ RENDER: TASKS ============ */
+function renderTasks(){
+  const today=tasksToday(),back=tasksBacklog();
+  const open=today.filter(t=>!t.done),done=today.filter(t=>t.done);
+  const dn=doneTodayCount(),dg=dayGoal();
+  let h=`<div class="card tight"><div class="between"><div><div class="eyebrow">Цель на день</div><div style="font-size:24px;font-weight:800;margin-top:4px" class="mono">${dn} / ${dg}</div></div>
+    <div class="row"><div class="stepbtn" onclick="setDayGoal(dayGoal()-1);save();renderTasks();renderHome()">−</div><div class="stepbtn" onclick="setDayGoal(dayGoal()+1);save();renderTasks();renderHome()">+</div></div></div>
+    <div class="bar" style="margin-top:11px"><i style="width:${dg>0?Math.min(100,dn/dg*100):100}%"></i></div></div>`;
+
+  h+=`<div class="card">`;
+  if(open.length===0&&done.length===0&&back.length===0){
+    h+=`<div class="empty"><div class="em">🧵</div><div class="et">Пока пусто</div><div class="es">Жми + и накидай задачи на сегодня</div></div>`;
+  } else {
+    if(open.length){h+=`<div class="sec-label" style="margin-top:2px">Сегодня · ${open.length}</div>`;open.forEach(t=>h+=taskRow(t))}
+    if(back.length){h+=`<div class="sec-label">Бэклог · ${back.length}</div>`;back.forEach(t=>h+=taskRow(t))}
+    if(done.length){h+=`<div class="sec-label">Готово · ${done.length}</div>`;done.forEach(t=>h+=taskRow(t))}
+  }
+  h+=`</div>`;
+  document.getElementById("tasks-body").innerHTML=h}
+function taskRow(t){return `<div class="tk ${t.done?"done":""}"><div class="ck ${t.done?"on":""}" onclick="toggleTask('${t.id}')"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="body"><div class="ttl">${esc(t.title)}</div>${taskMeta(t)}</div><div class="x" onclick="if(confirm('Удалить задачу?'))delTask('${t.id}')">×</div></div>`}
+
+/* ============ RENDER: GOALS ============ */
+function renderGoals(){resetWeeklyIfNew();
+  const mg=state.goals.money,inc=monthIncome(true);
+  let h=`<div class="card"><div class="between" style="margin-bottom:6px"><div class="eyebrow">Доход за месяц</div><div class="sub" onclick="sheetMoneyGoal()" style="color:var(--gold);font-weight:700;cursor:pointer">${mg?"изменить":"задать"}</div></div>`;
+  if(!mg){h+=`<div class="empty" style="padding:20px"><div class="et">Цель по доходу не задана</div><div class="es">Поставь 3 сценария — и следи за коридором</div></div>`}
+  else{const top=Math.max(mg.optim,inc,1);
+    h+=`<div class="h-big mono" style="margin:4px 0 12px">${fmt(inc)} <span style="font-size:17px;color:var(--muted)">${cur()}</span></div>`;
+    h+=`<div class="bar g" style="height:11px"><i style="width:${Math.min(100,inc/top*100)}%"></i>`;
+    h+=`<span class="tick" style="left:${mg.pess/top*100}%"></span><span class="tick" style="left:${mg.avg/top*100}%"></span></div>`;
+    h+=`<div class="scen">
+      <div class="c ${inc>=mg.pess&&mg.pess>0?"hit":""}"><div class="l">Пессим.</div><div class="n mono">${fmt(mg.pess)}</div></div>
+      <div class="c ${inc>=mg.avg&&mg.avg>0?"hit":""}"><div class="l">Средний</div><div class="n mono">${fmt(mg.avg)}</div></div>
+      <div class="c ${inc>=mg.optim&&mg.optim>0?"hit":""}"><div class="l">Оптим.</div><div class="n mono">${fmt(mg.optim)}</div></div>
+    </div>`}
+  h+=`</div>`;
+
+  /* weekly goals */
+  h+=`<div class="card"><div class="between" style="margin-bottom:2px"><div class="eyebrow">Цели недели</div><div class="sub" onclick="sheetWeekly()" style="color:var(--gold);font-weight:700;cursor:pointer">+ добавить</div></div>`;
+  if(state.goals.weekly.length===0)h+=`<div class="empty" style="padding:18px"><div class="et">Целей на неделю нет</div><div class="es">Напр. «50 постов в Threads» или «10 диалогов»</div></div>`;
+  state.goals.weekly.forEach(g=>{const p=g.target>0?Math.min(1,g.prog/g.target):0;const done=g.prog>=g.target;
+    h+=`<div class="goal"><div class="top"><div class="gname">${esc(g.title)} ${done?"<span style='color:var(--green)'>✓</span>":""}</div><div class="gval mono" style="color:${done?"var(--green)":"var(--gold)"}">${g.prog}/${g.target} ${esc(g.unit)}</div></div>
+      <div class="bar ${done?"g":""}"><i style="width:${p*100}%"></i></div>
+      <div class="gctl"><div class="stepbtn" onclick="bumpWeekly('${g.id}',-1)">−</div><div class="stepbtn" onclick="bumpWeekly('${g.id}',1)">+</div><div class="x" style="margin-left:auto;color:var(--muted2);font-size:20px;cursor:pointer" onclick="if(confirm('Удалить цель?'))delWeekly('${g.id}')">×</div></div></div>`});
+  h+=`</div>`;
+  document.getElementById("goals-body").innerHTML=h}
+
+/* ============ RENDER: MONEY ============ */
+function renderMoney(){
+  const inc=monthIncome(true),pend=monthPending(),exp=monthExpense(),bal=inc-exp;
+  let h=`<div class="grid2">
+    <div class="tile"><div class="k">↓ Доход (мес)</div><div class="v mono" style="color:var(--green)">${fmt(inc)}<small> ${cur()}</small></div></div>
+    <div class="tile"><div class="k">↑ Расход (мес)</div><div class="v mono">${fmt(exp)}<small> ${cur()}</small></div></div>
+  </div>
+  <div class="grid2">
+    <div class="tile"><div class="k">= Баланс</div><div class="v mono" style="color:${bal>=0?"var(--green)":"var(--red)"}">${fmt(bal)}<small> ${cur()}</small></div></div>
+    <div class="tile"><div class="k">⏳ Ждём оплату</div><div class="v mono" style="color:var(--gold)">${fmt(pend)}<small> ${cur()}</small></div></div>
+  </div>`;
+
+  /* sparkline */
+  const ser=monthlyIncomeSeries(),mx=Math.max(...ser.map(s=>s.v),1);
+  h+=`<div class="card"><div class="eyebrow" style="margin-bottom:4px">Доход · 6 месяцев</div><div class="spark" style="margin-bottom:24px">`;
+  ser.forEach((s,i)=>{h+=`<div class="b ${i===ser.length-1?"cur":""}" style="height:${Math.max(4,s.v/mx*100)}%"><span class="lb">${s.lbl}</span></div>`});
+  h+=`</div></div>`;
+
+  /* recurring */
+  const rec=state.expenses.filter(e=>e.recurring);
+  if(rec.length){h+=`<div class="card"><div class="eyebrow" style="margin-bottom:6px">Регулярные платежи</div>`;
+    rec.forEach(e=>h+=`<div class="mrow"><div class="ic out">↻</div><div class="body"><div class="nm">${esc(e.title)}</div><div class="dt">подписка</div></div><div class="amt out mono">${fmtMoney(e.amount)}</div></div>`);
+    h+=`</div>`}
+
+  /* transactions */
+  const tx=[...state.income.map(i=>({...i,kind:"in"})),...state.expenses.map(e=>({...e,kind:"out"}))].sort((a,b)=>b.date-a.date).slice(0,40);
+  h+=`<div class="card"><div class="eyebrow" style="margin-bottom:4px">Движение</div>`;
+  if(tx.length===0)h+=`<div class="empty" style="padding:20px"><div class="em">💰</div><div class="et">Транзакций нет</div><div class="es">Жми + — добавь доход или расход</div></div>`;
+  tx.forEach(t=>{
+    if(t.kind==="in"){const pend=t.status==="pending";
+      h+=`<div class="mrow"><div class="ic ${pend?"pend":"in"}" onclick="togglePaid('${t.id}')">${pend?"⏳":"↓"}</div><div class="body"><div class="nm">${esc(t.client||"Доход")}</div><div class="dt">${ruShort(t.date)} · ${pend?"ждём оплату":"оплачено"}${t.note?" · "+esc(t.note):""}</div></div><div class="amt in mono">+${fmt(t.amount)}</div><div class="x" style="color:var(--muted2);font-size:19px;cursor:pointer;padding-left:6px" onclick="if(confirm('Удалить?'))delIncome('${t.id}')">×</div></div>`}
+    else{h+=`<div class="mrow"><div class="ic out">↑</div><div class="body"><div class="nm">${esc(t.title||"Расход")}</div><div class="dt">${ruShort(t.date)}${t.recurring?" · регулярный":""}${t.note?" · "+esc(t.note):""}</div></div><div class="amt out mono">−${fmt(t.amount)}</div><div class="x" style="color:var(--muted2);font-size:19px;cursor:pointer;padding-left:6px" onclick="if(confirm('Удалить?'))delExpense('${t.id}')">×</div></div>`}
+  });
+  h+=`</div>`;
+  document.getElementById("money-body").innerHTML=h}
+
+/* ============ RENDER: MORE / SETTINGS ============ */
+function renderMore(){
+  let h=`<div class="card"><div class="eyebrow" style="margin-bottom:8px">Настройки</div>
+    <div class="set-row"><div><div class="sl">Имя</div><div class="sd">для приветствия на главной</div></div><input class="inp" style="width:130px;padding:9px 12px" value="${esc(state.settings.name)}" oninput="state.settings.name=this.value;save()" placeholder="Артём"></div>
+    <div class="set-row"><div><div class="sl">Валюта</div><div class="sd">для всех сумм</div></div>
+      <div class="seg" style="width:160px">${["₽","$","₾","€"].map(c=>`<button class="${cur()===c?"on":""}" onclick="state.settings.currency='${c}';save();renderMore();renderMoney();renderHome();renderGoals()">${c}</button>`).join("")}</div></div>
+    <div class="set-row"><div><div class="sl">Тема</div><div class="sd">${state.settings.theme==="dark"?"тёмная":"светлая"}</div></div><div class="toggle ${state.settings.theme==="light"?"on":""}" onclick="toggleTheme()"><i></i></div></div>
+  </div>`;
+
+  /* activity */
+  const act=(state.activity||[]).slice(0,12);
+  h+=`<div class="card"><div class="eyebrow" style="margin-bottom:6px">Лента активности</div>`;
+  if(act.length===0)h+=`<div class="empty" style="padding:16px"><div class="es">Здесь будет история действий</div></div>`;
+  const icn={task:"✓",new:"＋",income:"↓",expense:"↑"};
+  act.forEach(a=>{h+=`<div class="mrow" style="padding:9px 4px"><div class="ic" style="background:var(--card3);color:var(--txt2);width:32px;height:32px;font-size:14px">${icn[a.type]||"•"}</div><div class="body"><div class="nm" style="font-size:13px;font-weight:600">${esc(a.detail)}</div><div class="dt">${timeAgo(a.t)}</div></div></div>`});
+  h+=`</div>`;
+
+  /* stats */
+  const li=levelInfo(state.game.xp);
+  h+=`<div class="card"><div class="eyebrow" style="margin-bottom:8px">Прогресс</div>
+    <div class="grid3">
+      <div class="tile"><div class="k">Уровень</div><div class="v mono">${li.lvl}</div></div>
+      <div class="tile"><div class="k">XP</div><div class="v mono">${state.game.xp}</div></div>
+      <div class="tile"><div class="k">Стрик</div><div class="v mono">🔥${state.game.streak||0}</div></div>
+    </div></div>`;
+
+  /* data */
+  h+=`<div class="card"><div class="eyebrow" style="margin-bottom:10px">Данные</div>
+    <button class="btn btn-sec" onclick="exportData()" style="margin-bottom:10px">⬇ Выгрузить бэкап (JSON)</button>
+    <button class="btn btn-danger" onclick="wipe()">Стереть все данные</button>
+    <div class="sub" style="text-align:center;margin-top:14px">Loom · v1.0 · ${CLOUD_ON?(CLOUD_READY?"облако подключено":"облако настроено, ждём вход"):"локальный режим"}</div>
+  </div>`;
+  document.getElementById("more-body").innerHTML=h}
+function timeAgo(t){const s=(Date.now()-t)/1000;if(s<60)return "только что";if(s<3600)return Math.floor(s/60)+" мин назад";if(s<86400)return Math.floor(s/3600)+" ч назад";return ruShort(t)}
+
+/* ============ SHEETS ============ */
+function openSheet(html){const sb=document.getElementById("sheet-bg"),sh=document.getElementById("sheet");sh.innerHTML=`<div class="grab"></div>`+html;sb.classList.add("open");sh.classList.add("open")}
+function closeSheet(){document.getElementById("sheet-bg").classList.remove("open");document.getElementById("sheet").classList.remove("open")}
+document.getElementById("sheet-bg").onclick=closeSheet;
+
+let _tmp={};
+function sheetTask(){_tmp={priority:1,repeat:"none",due:null};
+  openSheet(`<h3>Новая задача</h3>
+    <div class="field"><label>Что сделать</label><input class="inp" id="t-title" placeholder="Напр. выложить 10 постов" autofocus></div>
+    <div class="field"><label>Приоритет</label><div class="seg" id="t-prio">
+      <button class="on" onclick="segSel('t-prio',this);_tmp.priority=1">Обычный</button>
+      <button onclick="segSel('t-prio',this);_tmp.priority=2">Приоритет</button>
+      <button onclick="segSel('t-prio',this);_tmp.priority=3">Важно</button></div></div>
+    <div class="field"><label>Повтор</label><div class="seg" id="t-rep">
+      <button class="on" onclick="segSel('t-rep',this);_tmp.repeat='none'">Разово</button>
+      <button onclick="segSel('t-rep',this);_tmp.repeat='daily'">Каждый день</button>
+      <button onclick="segSel('t-rep',this);_tmp.repeat='weekly'">Каждую неделю</button></div></div>
+    <div class="field"><label>Срок</label><div class="chips" id="t-due">
+      <div class="chip" onclick="chipDue(this,0)">Сегодня</div>
+      <div class="chip" onclick="chipDue(this,1)">Завтра</div>
+      <div class="chip" onclick="chipDue(this,7)">Через неделю</div>
+      <div class="chip" onclick="chipDue(this,-1)">Без срока</div></div></div>
+    <div class="field"><label>Клиент / проект (необяз.)</label><input class="inp" id="t-client" placeholder="имя клиента"></div>
+    <button class="btn btn-pri" onclick="saveTask()">Добавить задачу</button>`);
+  setTimeout(()=>{const e=document.getElementById("t-title");if(e)e.focus()},250)}
+function chipDue(el,days){document.querySelectorAll("#t-due .chip").forEach(c=>c.classList.remove("on"));el.classList.add("on");
+  if(days<0){_tmp.due=null}else{const d=new Date();d.setDate(d.getDate()+days);d.setHours(12,0,0,0);_tmp.due=d.getTime()}}
+function segSel(id,el){document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.remove("on"));el.classList.add("on")}
+function saveTask(){const t=document.getElementById("t-title").value.trim();if(!t){toast("Впиши задачу");return}
+  addTask({title:t,priority:_tmp.priority,repeat:_tmp.repeat,due:_tmp.due,client:document.getElementById("t-client").value.trim()});
+  closeSheet();renderTasks();renderHome();toast("Задача добавлена")}
+
+let _mkind="in";
+function sheetMoney(){_tmp={status:"paid",recurring:false,date:Date.now()};_mkind="in";
+  openSheet(`<h3>Добавить</h3>
+    <div class="field"><div class="seg" id="m-kind">
+      <button class="on" onclick="segSel('m-kind',this);mKind('in')">↓ Доход</button>
+      <button onclick="segSel('m-kind',this);mKind('out')">↑ Расход</button></div></div>
+    <div id="m-fields"></div>`);
+  mKind("in")}
+function mKind(k){_mkind=k;const f=document.getElementById("m-fields");
+  if(k==="in"){_tmp.status="paid";f.innerHTML=`
+    <div class="field"><label>Сумма</label><input class="inp mono" id="m-amt" type="number" inputmode="decimal" placeholder="0"></div>
+    <div class="field"><label>Клиент / источник</label><input class="inp" id="m-cli" placeholder="имя клиента"></div>
+    <div class="field"><label>Статус</label><div class="seg" id="m-st">
+      <button class="on" onclick="segSel('m-st',this);_tmp.status='paid'">Оплачено</button>
+      <button onclick="segSel('m-st',this);_tmp.status='pending'">Ждём оплату</button></div></div>
+    <div class="field"><label>Заметка (необяз.)</label><input class="inp" id="m-note" placeholder=""></div>
+    <button class="btn btn-pri" onclick="saveMoney()">Добавить доход</button>`}
+  else{f.innerHTML=`
+    <div class="field"><label>Сумма</label><input class="inp mono" id="m-amt" type="number" inputmode="decimal" placeholder="0"></div>
+    <div class="field"><label>На что</label><input class="inp" id="m-cli" placeholder="напр. хостинг, подписка"></div>
+    <div class="field"><div class="set-row" style="padding:4px 2px"><div class="sl">Регулярный платёж</div><div class="toggle" id="m-rec" onclick="this.classList.toggle('on');_tmp.recurring=this.classList.contains('on')"><i></i></div></div></div>
+    <div class="field"><label>Заметка (необяз.)</label><input class="inp" id="m-note" placeholder=""></div>
+    <button class="btn btn-pri" onclick="saveMoney()">Добавить расход</button>`;_tmp.recurring=false}}
+function saveMoney(){const a=+document.getElementById("m-amt").value;if(!a){toast("Впиши сумму");return}
+  const cli=document.getElementById("m-cli").value.trim(),note=document.getElementById("m-note").value.trim();
+  if(_mkind==="in")addIncome({amount:a,client:cli,status:_tmp.status,note});
+  else addExpense({amount:a,title:cli,recurring:_tmp.recurring,note});
+  closeSheet();renderMoney();renderHome();renderGoals();toast("Готово")}
+
+function sheetMoneyGoal(){const m=state.goals.money||{pess:"",avg:"",optim:""};
+  openSheet(`<h3>Цель по доходу · месяц</h3>
+    <div class="sub" style="margin-bottom:16px">Три сценария — увидишь в каком коридоре идёшь.</div>
+    <div class="field"><label>Пессимистичный</label><input class="inp mono" id="g-pess" type="number" inputmode="decimal" value="${m.pess||""}" placeholder="минимум"></div>
+    <div class="field"><label>Средний (основная цель)</label><input class="inp mono" id="g-avg" type="number" inputmode="decimal" value="${m.avg||""}" placeholder="реальная цель"></div>
+    <div class="field"><label>Оптимистичный</label><input class="inp mono" id="g-optim" type="number" inputmode="decimal" value="${m.optim||""}" placeholder="если всё зайдёт"></div>
+    <button class="btn btn-pri" onclick="saveMoneyGoal()">Сохранить</button>`)}
+function saveMoneyGoal(){setMoneyGoal(document.getElementById("g-pess").value,document.getElementById("g-avg").value,document.getElementById("g-optim").value);closeSheet();renderGoals();renderHome();toast("Цель сохранена")}
+
+function sheetWeekly(){openSheet(`<h3>Цель недели</h3>
+  <div class="field"><label>Название</label><input class="inp" id="w-title" placeholder="напр. постов в Threads" autofocus></div>
+  <div class="field"><label>Сколько за неделю</label><input class="inp mono" id="w-target" type="number" inputmode="numeric" placeholder="50"></div>
+  <div class="field"><label>Единица (необяз.)</label><input class="inp" id="w-unit" placeholder="напр. шт"></div>
+  <button class="btn btn-pri" onclick="saveWeekly()">Добавить цель</button>`);
+  setTimeout(()=>{const e=document.getElementById("w-title");if(e)e.focus()},250)}
+function saveWeekly(){const t=document.getElementById("w-title").value.trim(),tg=+document.getElementById("w-target").value;if(!t||!tg){toast("Заполни название и число");return}
+  addWeeklyGoal({title:t,target:tg,unit:document.getElementById("w-unit").value.trim()});closeSheet();renderGoals();toast("Цель добавлена")}
+
+/* FAB context */
+document.getElementById("fab").onclick=function(){haptic("light");const a=document.querySelector(".screen.active").id.replace("screen-","");
+  if(a==="money")sheetMoney();else if(a==="goals")sheetWeekly();else sheetTask()}
+
+/* ============ NAV ============ */
+function show(tab){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  const sc=document.getElementById("screen-"+tab);if(sc)sc.classList.add("active");
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
+  const fab=document.getElementById("fab");fab.style.display=(tab==="more")?"none":"flex";
+  if(tab==="home")renderHome();if(tab==="tasks")renderTasks();if(tab==="goals")renderGoals();if(tab==="money")renderMoney();if(tab==="more")renderMore();
+  window.scrollTo(0,0)}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{haptic("light");show(b.dataset.tab)});
+
+/* ============ THEME / MISC ============ */
+function applyTheme(){document.documentElement.setAttribute("data-theme",state.settings.theme||"dark");
+  if(TG){try{TG.setHeaderColor(state.settings.theme==="light"?"#ece5d6":"#0f0e0c")}catch(e){}}}
+function toggleTheme(){state.settings.theme=state.settings.theme==="dark"?"light":"dark";save();applyTheme();renderMore()}
+let toastT=null;
+function toast(msg,cls){const el=document.getElementById("toast");el.textContent=msg;el.className=(cls||"")+" show";clearTimeout(toastT);toastT=setTimeout(()=>el.className=cls||"",1700)}
+function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="loom-backup-"+todayKey()+".json";a.click();toast("Бэкап выгружен")}
+function wipe(){if(confirm("Стереть ВСЕ данные Loom безвозвратно?")){state=JSON.parse(JSON.stringify(DEFAULTS));save();applyTheme();show("home");toast("Очищено")}}
+function refreshAll(){renderHome();renderTasks();renderGoals();renderMoney();renderMore();renderLvl()}
+
+/* ============ BOOT ============ */
+(function boot(){
+  if(TG){try{TG.ready();TG.expand()}catch(e){}}
+  applyTheme();
+  resetRecurring();ensureQuests();resetWeeklyIfNew();
+  show("home");renderLvl();
+
+  if(CLOUD_ON){
+    TG_ID=(TG&&TG.initDataUnsafe&&TG.initDataUnsafe.user)?("tg_"+TG.initDataUnsafe.user.id):deviceId();
+    setSync("syncing");
+    cloudPull().then(cloud=>{CLOUD_READY=true;
+      if(cloud&&cloud.data&&(cloud.updated_at||0)>(state._u||0)){
+        state=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),cloud.data);
+        localStorage.setItem(KEY,JSON.stringify(state));applyTheme();resetRecurring();resetWeeklyIfNew();
+        refreshAll();toast("Загружено из облака")
+      } else { cloudPushAll().catch(()=>{}) }
+      setSync("ok")
+    }).catch(e=>{console.warn("cloud boot",e);setSync("err")});
+    /* manual re-pull on sync dot */
+    document.getElementById("sync").onclick=()=>{if(!CLOUD_READY)return;setSync("syncing");cloudPull().then(cloud=>{if(cloud&&cloud.data){state=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),cloud.data);localStorage.setItem(KEY,JSON.stringify(state));applyTheme();resetRecurring();refreshAll();toast("Обновлено")}setSync("ok")}).catch(()=>setSync("err"))}
+  } else { setSync("off") }
+})();
+</script>
+</body>
+</html>
